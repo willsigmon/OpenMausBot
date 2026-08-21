@@ -121,6 +121,78 @@ final class ProfileClientTests: XCTestCase {
         XCTAssertGreaterThan(request.timeoutInterval, 120)
     }
 
+    func testAvatarFetchAcceptsOnlySharedRasterAttachmentPaths() async throws {
+        ProfileRequestStub.responseBody = Data([0x89, 0x50, 0x4e, 0x47])
+
+        let bytes = try await client.avatar(path: "/api/attachments/avatar-123.webp")
+        XCTAssertEqual(bytes, ProfileRequestStub.responseBody)
+        XCTAssertEqual(ProfileRequestStub.capturedRequest?.url?.path, "/api/attachments/avatar-123.webp")
+
+        for invalid in [
+            "/api/attachments/.",
+            "/api/attachments/..",
+            "/api/attachments/../config.json",
+            "/api/attachments/%2e%2e",
+            "/api/attachments/avatar.jpeg",
+            "/api/attachments/avatar.svg",
+            "/api/attachments/avatar_name.png",
+        ] {
+            await assertBadURL { _ = try await self.client.avatar(path: invalid) }
+        }
+    }
+
+    func testScopedConnectorStatusRejectsEmptyAndInvalidSlugs() async {
+        await assertBadURL { _ = try await self.client.connectorStatuses(slugs: []) }
+        await assertBadURL { _ = try await self.client.connectorStatuses(slugs: ["café"]) }
+        await assertBadURL { _ = try await self.client.connectorStatuses(slugs: ["gmail", "bad/slash"]) }
+    }
+
+    func testConnectorComponentsMatchTheCompanionASCIIContracts() async throws {
+        ProfileRequestStub.responseBody = Data(#"{"url":"https://auth.example/connect"}"#.utf8)
+
+        _ = try await client.authorizeConnector(slug: "_internal-tool", alias: nil)
+        XCTAssertEqual(ProfileRequestStub.capturedRequest?.url?.path, "/api/connectors/_internal-tool/authorize")
+
+        await assertBadURL { _ = try await self.client.authorizeConnector(slug: "café", alias: nil) }
+        await assertBadURL { try await self.client.disconnectConnector(slug: "slack", accountId: "_account") }
+        await assertBadURL { try await self.client.disconnectConnector(slug: "slack", accountId: String(repeating: "a", count: 129)) }
+    }
+
+    func testUnknownRoutineScheduleCannotBeWrittenBack() async {
+        let input = RoutineInput(
+            name: "Future routine",
+            prompt: "Keep its schedule intact",
+            botId: "avatar-bot",
+            schedule: .init(type: .unknown),
+            durationMinutes: 30
+        )
+
+        do {
+            _ = try await client.updateRoutine(id: "routine-1", input: input)
+            XCTFail("expected an unsupported schedule error")
+        } catch let APIError.transport(message) {
+            XCTAssertEqual(message, "Choose a supported schedule before saving this routine.")
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        XCTAssertNil(ProfileRequestStub.capturedRequest)
+    }
+
+    private func assertBadURL(
+        _ operation: () async throws -> Void,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        do {
+            try await operation()
+            XCTFail("expected badURL", file: file, line: line)
+        } catch APIError.badURL {
+            // Expected: reject locally before sending paired credentials.
+        } catch {
+            XCTFail("unexpected error: \(error)", file: file, line: line)
+        }
+    }
+
     private static let botJSON = """
     {
       "id":"avatar-bot","threadId":"avatar-thread","name":"Scout","title":"Researcher",

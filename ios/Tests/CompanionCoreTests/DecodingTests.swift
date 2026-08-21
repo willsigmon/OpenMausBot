@@ -103,6 +103,47 @@ final class DecodingTests: XCTestCase {
         XCTAssertFalse(detached.requiresTaskSwitch(activeThreadId: "task-2"))
     }
 
+    func testDecodesMultipleConnectedAccountsAndNoAuthToolkit() throws {
+        let payload = #"""
+        {
+          "configured": true,
+          "services": {
+            "gmail": {
+              "connected": true,
+              "pending": false,
+              "status": "ACTIVE",
+              "accounts": [
+                {"id": "ca_work", "alias": "Work", "status": "ACTIVE"},
+                {"id": "ca_personal", "status": "ACTIVE"}
+              ]
+            },
+            "weather": {
+              "connected": true,
+              "pending": false,
+              "status": "ACTIVE",
+              "accounts": []
+            }
+          }
+        }
+        """#
+        let statuses = try JSONDecoder().decode(ConnectorStatuses.self, from: Data(payload.utf8))
+        let gmail = try XCTUnwrap(statuses.services["gmail"])
+        XCTAssertEqual(gmail.accounts?.map(\.id), ["ca_work", "ca_personal"])
+        XCTAssertEqual(gmail.accounts?.first?.alias, "Work")
+        XCTAssertNil(gmail.accounts?.last?.alias)
+
+        let noAuth = try XCTUnwrap(statuses.services["weather"])
+        XCTAssertTrue(noAuth.connected)
+        XCTAssertEqual(noAuth.accounts?.isEmpty, true)
+
+        let disabled = try JSONDecoder().decode(
+            ConnectorStatuses.self,
+            from: Data(#"{"configured":false,"services":{}}"#.utf8)
+        )
+        XCTAssertFalse(disabled.configured)
+        XCTAssertTrue(disabled.services.isEmpty)
+    }
+
     func testDecodesTheCloudBackendAndItsAbsence() throws {
         // The cloud-desktop button hides on cloudBackend == "vps", so both
         // sides of that gate must decode: a harness that sends the field, and

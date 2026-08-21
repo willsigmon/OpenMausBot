@@ -3932,6 +3932,12 @@ const server = createServer(async (req, res) => {
       const { cards, source } = await composio.listToolkits(cfg);
       return json(res, 200, { configured: composio.configured(cfg), mode: composio.connectionMode(cfg), source, cards });
     }
+    if (method === "GET" && path === "/api/connectors/connected") {
+      if (!composio.configured(cfg)) {
+        return json(res, 200, { configured: false, services: {} });
+      }
+      return json(res, 200, { configured: true, services: await composio.connectedServices(cfg) });
+    }
     if (method === "GET" && path === "/api/connectors") {
       const services = (url.searchParams.get("services") ?? "").split(",").filter(Boolean);
       if (!composio.configured(cfg)) {
@@ -3941,7 +3947,12 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { configured: true, services: status });
     }
     m = path.match(/^\/api\/connectors\/([\w-]+)\/authorize$/);
-    if (m && method === "POST") return json(res, 200, await composio.authorizeService(cfg, m[1]));
+    if (m && method === "POST") {
+      const body = await readBody(req);
+      return json(res, 200, await composio.authorizeService(cfg, m[1], body.alias));
+    }
+    m = path.match(/^\/api\/connectors\/([\w-]+)\/accounts\/([A-Za-z0-9][A-Za-z0-9_-]{0,127})$/);
+    if (m && method === "DELETE") return json(res, 200, await composio.removeAccount(cfg, m[1], m[2]));
     m = path.match(/^\/api\/connectors\/([\w-]+)$/);
     if (m && method === "DELETE") return json(res, 200, await composio.removeService(cfg, m[1]));
 

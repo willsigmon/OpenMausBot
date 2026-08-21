@@ -108,6 +108,13 @@ const ALLOWED: ReadonlyArray<{ method: string; path: RegExp }> = [
   { method: "PATCH", path: /^\/api\/routines\/[\w-]+$/ },
   { method: "DELETE", path: /^\/api\/routines\/[\w-]+$/ },
   { method: "POST", path: /^\/api\/routines\/[\w-]+\/run$/ },
+
+  // Multi-account Composio management exposes opaque ids and aliases only.
+  { method: "GET", path: /^\/api\/connectors\/catalog$/ },
+  { method: "GET", path: /^\/api\/connectors\/connected$/ },
+  { method: "GET", path: /^\/api\/connectors$/ },
+  { method: "POST", path: /^\/api\/connectors\/[\w-]+\/authorize$/ },
+  { method: "DELETE", path: /^\/api\/connectors\/[\w-]+\/accounts\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/ },
 ];
 
 /** Route families worth naming in the refusal.

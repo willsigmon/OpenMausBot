@@ -454,6 +454,27 @@ public struct CompanionClient: Sendable {
         return (response.routines, response.runs)
     }
 
+    public func connectorCatalog() async throws -> ConnectorCatalog {
+        try await send(try makeRequest("GET", "/api/connectors/catalog"), as: ConnectorCatalog.self)
+    }
+
+    public func connectorStatuses(slugs: [String]) async throws -> ConnectorStatuses {
+        guard !slugs.isEmpty, slugs.allSatisfy(Self.validConnectorSlug) else { throw APIError.badURL }
+        let services = slugs.joined(separator: ",")
+        let query = [URLQueryItem(name: "services", value: services)]
+        return try await send(try makeRequest("GET", "/api/connectors", query: query), as: ConnectorStatuses.self)
+    }
+
+    /// Complete account-aware status in one request, independent of catalog
+    /// ordering or pagination. Scoped status remains available for targeted
+    /// post-OAuth polling, but must not be used to discover all accounts.
+    public func allConnectorStatuses() async throws -> ConnectorStatuses {
+        try await send(
+            try makeRequest("GET", "/api/connectors/connected"),
+            as: ConnectorStatuses.self
+        )
+    }
+
     // MARK: - Doing
 
     /// Make a new bot. The harness picks its name, colour and greeting — the
@@ -547,6 +568,23 @@ public struct CompanionClient: Sendable {
         try await send(try makeRequest("DELETE", "/api/routines/\(id)"))
     }
 
+    public func authorizeConnector(slug: String, alias: String?) async throws -> URL {
+        guard Self.validConnectorSlug(slug) else { throw APIError.badURL }
+        let trimmed = alias?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = trimmed.map { ["alias": $0] }
+        let response = try await send(
+            try makeRequest("POST", "/api/connectors/\(slug)/authorize", body: body),
+            as: ConnectorAuthorizationResponse.self
+        )
+        guard let url = URL(string: response.url), url.scheme == "https", url.host != nil else { throw APIError.badURL }
+        return url
+    }
+
+    public func disconnectConnector(slug: String, accountId: String) async throws {
+        guard Self.validConnectorSlug(slug), Self.validConnectorAccountID(accountId) else { throw APIError.badURL }
+        try await send(try makeRequest("DELETE", "/api/connectors/\(slug)/accounts/\(accountId)"))
+    }
+
     private static func routineBody(_ input: RoutineInput) -> [String: Any] {
         var schedule: [String: Any] = ["type": input.schedule.type.rawValue]
         if let at = input.schedule.at { schedule["at"] = at }
@@ -558,6 +596,29 @@ public struct CompanionClient: Sendable {
         ]
         if let enabled = input.enabled { body["enabled"] = enabled }
         return body
+    }
+
+    /// Matches the companion's `[/\w-]+` toolkit route component. JavaScript
+    /// `\w` is ASCII here; Unicode letters must not become a confusing 404.
+    private static func validConnectorSlug(_ value: String) -> Bool {
+        !value.isEmpty && value.utf8.allSatisfy(Self.isASCIIConnectorByte)
+    }
+
+    /// Matches `[A-Za-z0-9][A-Za-z0-9_-]{0,127}` on the companion exactly.
+    private static func validConnectorAccountID(_ value: String) -> Bool {
+        guard let first = value.utf8.first,
+              value.utf8.count <= 128,
+              Self.isASCIIAlphanumeric(first)
+        else { return false }
+        return value.utf8.allSatisfy(Self.isASCIIConnectorByte)
+    }
+
+    private static func isASCIIAlphanumeric(_ byte: UInt8) -> Bool {
+        (48...57).contains(byte) || (65...90).contains(byte) || (97...122).contains(byte)
+    }
+
+    private static func isASCIIConnectorByte(_ byte: UInt8) -> Bool {
+        Self.isASCIIAlphanumeric(byte) || byte == 95 || byte == 45
     }
 
     /// Make a room. The harness names it after the first member when `name`

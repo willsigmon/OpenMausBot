@@ -386,7 +386,7 @@ public struct ConfigStatus: Codable, Sendable {
     }
 }
 
-// MARK: - Agent profiles, voices, routines, and notifications
+// MARK: - Agent profiles, voices, routines, and connected apps
 
 public struct BotProfilePatch: Encodable, Sendable {
     /// `nil` means "leave the field alone". Profile actions deliberately send
@@ -592,6 +592,40 @@ public extension Routine {
     }
 }
 
+public struct ConnectorCard: Codable, Hashable, Identifiable, Sendable {
+    public var slug: String
+    public var label: String
+    public var blurb: String
+    public var logo: String?
+    public var domain: String?
+    public var id: String { slug }
+}
+
+public struct ConnectorAccount: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var alias: String?
+    public var status: String
+}
+
+public struct ConnectorStatus: Codable, Hashable, Sendable {
+    public var connected: Bool
+    public var pending: Bool?
+    public var status: String?
+    public var accounts: [ConnectorAccount]?
+}
+
+public struct ConnectorCatalog: Codable, Sendable {
+    public var configured: Bool
+    public var mode: String?
+    public var source: String?
+    public var cards: [ConnectorCard]
+}
+
+public struct ConnectorStatuses: Codable, Sendable {
+    public var configured: Bool
+    public var services: [String: ConnectorStatus]
+}
+
 public struct NotificationTarget: Equatable, Sendable {
     public let botId: String
     public let threadId: String
@@ -683,3 +717,4 @@ struct RoutinesResponse: Codable, Sendable {
 
 struct RoutineResponse: Codable, Sendable { var routine: Routine }
 struct RoutineRunResponse: Codable, Sendable { var run: RoutineRun }
+struct ConnectorAuthorizationResponse: Codable, Sendable { var url: String }

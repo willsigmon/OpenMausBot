@@ -40,7 +40,6 @@ final class Session: ObservableObject {
     @Published private(set) var notificationAuthorization: UNAuthorizationStatus = .notDetermined
     /// A short-lived desktop handoff waiting for PairingView to present it.
     @Published private(set) var pairingInvite: PairingInvite?
-
     /// A notification response that should be pushed by the roster's
     /// NavigationStack after the exact detached task has been activated.
     @Published private(set) var notificationChat: Chat?
@@ -736,7 +735,7 @@ final class Session: ObservableObject {
         return try? await client.config()
     }
 
-    // MARK: - Routines
+    // MARK: - Routines and connected apps
 
     func loadRoutines() async -> (routines: [Routine], runs: [RoutineRun]) {
         guard let client else { return ([], []) }
@@ -779,6 +778,36 @@ final class Session: ObservableObject {
     func deleteRoutine(_ routine: Routine) async -> Bool {
         guard let client else { return false }
         do { try await client.deleteRoutine(id: routine.id); return true }
+        catch { actionError = error.localizedDescription; return false }
+    }
+
+    func loadConnectorCatalog() async -> ConnectorCatalog? {
+        guard let client else { return nil }
+        do { return try await client.connectorCatalog() }
+        catch { actionError = error.localizedDescription; return nil }
+    }
+
+    func loadConnectorStatuses(_ slugs: [String]) async -> ConnectorStatuses? {
+        guard let client else { return nil }
+        do { return try await client.connectorStatuses(slugs: slugs) }
+        catch { actionError = error.localizedDescription; return nil }
+    }
+
+    func loadAllConnectorStatuses() async -> ConnectorStatuses? {
+        guard let client else { return nil }
+        do { return try await client.allConnectorStatuses() }
+        catch { actionError = error.localizedDescription; return nil }
+    }
+
+    func authorizeConnector(_ slug: String, alias: String?) async -> URL? {
+        guard let client else { return nil }
+        do { return try await client.authorizeConnector(slug: slug, alias: alias) }
+        catch { actionError = error.localizedDescription; return nil }
+    }
+
+    func disconnectConnector(_ slug: String, accountId: String) async -> Bool {
+        guard let client else { return false }
+        do { try await client.disconnectConnector(slug: slug, accountId: accountId); return true }
         catch { actionError = error.localizedDescription; return false }
     }
 
