@@ -323,7 +323,7 @@ export function Composer({
           onRemove={removeAttachment}
           allowImages={engineSupportsImages}
         />
-        <div className="flex items-end gap-2 rounded-3xl border border-hairline/40 bg-raised/60 py-2 pl-3 pr-2">
+        <div className="composer-shell flex items-end gap-2 rounded-3xl border border-hairline/40 bg-raised/60 py-2 pl-3 pr-2">
         <textarea
           ref={inputRef}
           rows={1}
@@ -456,7 +456,7 @@ export function Composer({
             aria-label={busy && canSteer ? "Send into the running turn" : busy ? "Queue message" : "Send message"}
             title={busy && canSteer ? "Send into the running turn" : busy ? "Sends when the current turn finishes" : "Send"}
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full text-white",
+              "btn-premium flex size-8 shrink-0 items-center justify-center rounded-full text-white",
               busy && !canSteer ? "bg-raised text-ink-secondary hover:bg-raised-hover" : "bg-accent hover:brightness-110",
             )}
           >

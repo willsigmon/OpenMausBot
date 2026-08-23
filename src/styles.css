@@ -871,3 +871,98 @@ button:disabled.bg-danger {
   color: var(--color-ink-secondary);
   opacity: 1;
 }
+
+/* ── Premium controls ────────────────────────────────────────────────────
+   Layered, skin-aware treatments shared by primary CTAs, secondary chips
+   and the composer shell (pattern-studied from Suno / ElevenLabs / Gemini):
+   filled controls get a top-lit gradient, an inner sheen and a tinted
+   depth shadow; containers answer focus; presses feel physical. Every
+   colour mixes from the skin tokens, so Midnight, Atelier and Foundry
+   each keep their own identity. */
+.btn-premium {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-accent) 84%, white),
+    var(--color-accent) 55%,
+    color-mix(in srgb, var(--color-accent) 90%, black)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(0 0 0 / 0.16),
+    0 1px 2px rgb(0 0 0 / 0.24),
+    0 4px 16px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  transition:
+    transform 130ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+.btn-premium:hover:not(:disabled) {
+  filter: brightness(1.07) saturate(1.04);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.34),
+    inset 0 -1px 0 rgb(0 0 0 / 0.16),
+    0 2px 4px rgb(0 0 0 / 0.26),
+    0 8px 24px color-mix(in srgb, var(--color-accent) 42%, transparent);
+}
+.btn-premium:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.98);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    inset 0 2px 6px rgb(0 0 0 / 0.22),
+    0 1px 2px rgb(0 0 0 / 0.2);
+}
+button:disabled.btn-premium {
+  /* the disabled override above wins on background-colour; drop the
+     gradient + glow so the muted fill reads as intentionally off */
+  background-image: none;
+  box-shadow: none;
+}
+
+/* Quiet companion to .btn-premium: bordered chip for secondary actions. */
+.btn-chip {
+  background-color: var(--color-control);
+  border: 1px solid color-mix(in srgb, var(--color-hairline) 80%, transparent);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 130ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-chip:hover {
+  background-color: var(--color-raised-hover);
+  border-color: var(--color-hairline);
+}
+.btn-chip:active {
+  transform: scale(0.97);
+}
+
+/* The composer pill answers attention: it lifts its border toward the
+   accent and breathes a soft accent halo while you are typing in it. */
+.composer-shell {
+  transition:
+    border-color 200ms ease,
+    box-shadow 240ms ease,
+    background-color 200ms ease;
+}
+.composer-shell:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-hairline));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, transparent),
+    0 10px 32px color-mix(in srgb, var(--color-accent) 15%, transparent),
+    0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-premium,
+  .btn-chip,
+  .composer-shell {
+    transition: none;
+  }
+  .btn-premium:hover:not(:disabled),
+  .btn-premium:active:not(:disabled),
+  .btn-chip:active {
+    transform: none;
+  }
+}
