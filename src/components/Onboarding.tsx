@@ -6,12 +6,37 @@ import { useDesktopCapabilities } from "./DesktopCapabilities";
 import { EngineSetup } from "./EngineSetup";
 import { ProviderMark } from "./ProviderIcons";
 import type { InstanceInfo } from "@/state/store";
+import type { MausState } from "@/lib/mascot";
 
 // Three-step first-run onboarding: who you are (email), what's installed
 // (live engine checks from the harness), what the app may use (TCC).
 // Every check is skippable — onboarding must never brick the app.
+//
+// Design notes: the mascot is a live greeter, not a logo. It reacts to what
+// the visitor is doing (waking on input, listening while a field has focus,
+// celebrating a valid form) so each step reads as a conversation rather than
+// a form. Progress is shown as three dots; statuses use the skin tokens
+// (success / warning) so every theme renders correctly.
 
 type InstanceRow = InstanceInfo;
+
+const STEP_LABELS = ["You", "Engines", "Permissions"] as const;
+
+function StepDots({ step }: { step: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2" role="group" aria-label="Onboarding progress">
+      {STEP_LABELS.map((label, index) => (
+        <span
+          key={label}
+          title={label}
+          className={`size-1.5 rounded-full transition-colors ${
+            index === step ? "bg-accent" : index < step ? "bg-accent/40" : "bg-raised"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 function StatusRow({
   ok,
@@ -32,7 +57,7 @@ function StatusRow({
     <div className="flex items-start gap-3 rounded-xl bg-card p-3.5">
       <span
         className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ${
-          ok ? "bg-[#00c97222] text-[#38d591]" : warn ? "bg-[#ff980022] text-[#ff9800]" : "bg-raised text-ink-secondary"
+          ok ? "bg-success/15 text-success" : warn ? "bg-warning/15 text-warning" : "bg-raised text-ink-secondary"
         }`}
       >
         {ok ? <Check size={14} /> : <AlertTriangle size={13} />}
@@ -76,7 +101,7 @@ function engineTitle({ instance, label }: EngineEntry): string {
  * work look the same. */
 function ReadyTile(entry: EngineEntry) {
   return (
-    <div className="flex items-start gap-2.5 rounded-xl bg-card p-3">
+    <div className="flex items-start gap-2.5 rounded-xl bg-card p-3 transition-colors hover:bg-raised/50">
       <ProviderMark driverKind={entry.instance.driverKind} size={17} />
       <div className="min-w-0">
         <div className="truncate text-[13.5px] font-medium text-ink">{engineTitle(entry)}</div>
@@ -113,6 +138,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [instances, setInstances] = useState<InstanceRow[] | null>(null);
   const [perms, setPerms] = useState<{ mic: string } | null>(null);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+  const [mascotState, setMascotState] = useState<MausState>("idle");
+
+  // The mascot mirrors the moment: waking while you type your name,
+  // listening while a field holds focus, celebrating a valid invite.
+  useEffect(() => {
+    if (step === 0) setMascotState(valid ? "happy" : "listening");
+  }, [step, valid]);
 
   const saveProfile = () => {
     identifyEmail(email.trim().toLowerCase());
@@ -123,6 +155,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ profile: { name: name.trim(), email: email.trim().toLowerCase() } }),
     }).catch(() => {});
+    track("onboarding_named", name.trim() ? { named: true } : { named: false });
     setStep(1);
   };
 
@@ -188,11 +221,17 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           the engine list scrolls inside it, so the header and Continue stay
           put and nothing runs into the edges */}
       <div
-        className={`flex max-h-full w-full flex-col rounded-2xl border border-hairline/40 bg-panel p-8 ${step === 1 ? "max-w-[680px]" : "max-w-[460px]"}`}
+        className={`flex max-h-full w-full animate-panel-in flex-col rounded-2xl border border-hairline/40 bg-panel p-8 ${step === 1 ? "max-w-[680px]" : "max-w-[460px]"}`}
       >
         {step === 0 && (
-          <div className="flex flex-col items-center">
-            <MausAvatar color="green" state="happy" size={72} />
+          <form
+            className="flex flex-col items-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (valid) saveProfile();
+            }}
+          >
+            <MausAvatar color="green" state={mascotState} size={84} />
             <h1 className="mt-4 text-[20px] font-semibold text-ink">Welcome to OpenMausBot</h1>
             <p className="mt-1.5 text-center text-[14px] leading-relaxed text-ink-secondary">
               Bots that do real work on their own computer. Tell us who you are
@@ -203,25 +242,31 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={() => setMascotState("curious")}
+              onBlur={() => setMascotState("listening")}
               placeholder="Your name"
+              aria-label="Your name (optional)"
               className="mt-5 w-full rounded-lg border border-hairline/40 bg-inset px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-secondary focus:border-hairline focus:outline-none"
             />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setMascotState("listening")}
               onKeyDown={(e) => e.key === "Enter" && valid && saveProfile()}
               placeholder="you@example.com"
+              aria-label="Email address (optional)"
               className="mt-3 w-full rounded-lg border border-hairline/40 bg-inset px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-secondary focus:border-hairline focus:outline-none"
             />
             <button
-              onClick={saveProfile}
+              type="submit"
               disabled={!valid}
-              className="mt-3 w-full rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white disabled:opacity-40"
+              className="btn-premium mt-3 w-full rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white disabled:opacity-40"
             >
               Continue
             </button>
             <button
+              type="button"
               onClick={() => {
                 track("email_skipped");
                 setStep(1);
@@ -230,15 +275,20 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             >
               Maybe later
             </button>
-          </div>
+          </form>
         )}
 
         {step === 1 && (
           <div className="flex min-h-0 flex-col">
-            <h1 className="text-[18px] font-semibold text-ink">Your engines</h1>
-            <p className="mt-1 text-[13.5px] text-ink-secondary">
-              Bots run on AI tools installed on this computer — here&rsquo;s what we found.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-[18px] font-semibold text-ink">Your engines</h1>
+                <p className="mt-1 text-[13.5px] text-ink-secondary">
+                  Bots run on AI tools installed on this computer — here&rsquo;s what we found.
+                </p>
+              </div>
+              <MausAvatar color="green" state={setupEngines.length ? "working" : "proud"} size={56} />
+            </div>
             <div className="mt-4 flex min-h-0 flex-col gap-2.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
               {!instances ? (
                 <div className="flex items-center gap-2 py-6 text-ink-secondary">
@@ -266,12 +316,20 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                       ))}
                     </>
                   )}
+                  {engines.length === 0 && (
+                    <div className="rounded-xl bg-card p-6 text-center">
+                      <MausAvatar color="green" state="curious" size={48} />
+                      <p className="mt-3 text-[13.5px] leading-relaxed text-ink-secondary">
+                        No engines detected yet. You can install one anytime — bots will pick it up automatically.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </div>
             <button
               onClick={() => (capabilities.dictation.available ? setStep(2) : finish())}
-              className="mt-5 w-full shrink-0 rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white"
+              className="mt-5 w-full shrink-0 rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white btn-premium transition-transform active:scale-[0.98]"
             >
               Continue
             </button>
@@ -280,10 +338,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
         {step === 2 && (
           <div className="flex flex-col">
-            <h1 className="text-[18px] font-semibold text-ink">Permissions</h1>
-            <p className="mt-1 text-[13.5px] text-ink-secondary">
-              Optional, and only ever used when you ask for the feature.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-[18px] font-semibold text-ink">Permissions</h1>
+                <p className="mt-1 text-[13.5px] text-ink-secondary">
+                  Optional, and only ever used when you ask for the feature.
+                </p>
+              </div>
+              <MausAvatar color="green" state="listening" size={56} />
+            </div>
             <div className="mt-4 flex flex-col gap-2.5">
               <div className="flex items-center justify-between gap-3 rounded-xl bg-card p-3.5">
                 <div className="flex items-start gap-3">
@@ -296,7 +359,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                   </div>
                 </div>
                 {perms?.mic === "granted" ? (
-                  <Check size={16} className="shrink-0 text-[#38d591]" />
+                  <Check size={16} className="shrink-0 text-success" />
                 ) : perms?.mic === "denied" || perms?.mic === "restricted" ? (
                   <button
                     onClick={() => window.ogb?.permOpenSettings?.("mic")}
@@ -321,7 +384,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                   triggers on the first real capture in the Computer panel,
                   which is the moment the user has context for the dialog. */}
             </div>
-            <button onClick={finish} className="mt-5 w-full rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white">
+            <button onClick={finish} className="btn-premium mt-5 w-full rounded-lg bg-accent py-2.5 text-[15px] font-medium text-white">
               Start using OpenMausBot
             </button>
             <button onClick={finish} className="mt-3 text-[12px] text-ink-secondary hover:text-ink">
@@ -329,6 +392,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             </button>
           </div>
         )}
+
+        <StepDots step={step} />
 
       </div>
     </div>
