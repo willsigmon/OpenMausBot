@@ -150,7 +150,13 @@ public enum ClaudeDriver {
         extra: [String: String] = [:]
     ) -> [String: String] {
         var env = base
-        env["PATH"] = EnvPath.augmentedPath(environment: base)
+        // Per-instance extras merge FIRST, then hygiene strips: until
+        // local-inject (S6) nothing may reintroduce a stripped name through
+        // instance config, deliberately or accidentally.
+        for (key, value) in extra {
+            env[key] = value
+        }
+        env["PATH"] = EnvPath.augmentedPath(environment: env)
         env["NPM_CONFIG_LOGLEVEL"] = "error"
         env.removeValue(forKey: "CLAUDECODE")
         env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
@@ -159,9 +165,6 @@ public enum ClaudeDriver {
         // is ever injected, so ANTHROPIC_API_KEY is always removed — the
         // branch upstream takes when applied.injected is false.
         env.removeValue(forKey: "ANTHROPIC_API_KEY")
-        for (key, value) in extra {
-            env[key] = value
-        }
         return env
     }
 
@@ -525,10 +528,6 @@ extension ClaudeDriver {
         RuntimeEvent(provider: driverKind, threadId: threadId, turnId: turnId, kind: .turnCompleted(ok: false, stopReason: stopReason, cost: nil, denials: [], usage: nil))
     }
 
-    private static func completed(_ threadId: ThreadId, _ turnId: TurnId, ok: Bool, stopReason: String?) -> RuntimeEvent {
-        RuntimeEvent(provider: driverKind, threadId: threadId, turnId: turnId, kind: .turnCompleted(ok: ok, stopReason: stopReason, cost: nil, denials: [], usage: nil))
-    }
-
     private static func tailOf(_ text: String) -> String {
         String(text.trimmingCharacters(in: .whitespacesAndNewlines).suffix(300))
     }
@@ -741,7 +740,7 @@ final class ClaudeAdapter: ProviderAdapter, @unchecked Sendable {
     private var activeTurnIds: [ThreadId: TurnId] = [:]
 
     func interruptTurn(_ threadId: ThreadId, turnId: TurnId?) async throws {
-        stop(for: threadId)()
+        stop(for: threadId)?()
     }
 
     func respondToRequest(
@@ -764,11 +763,11 @@ final class ClaudeAdapter: ProviderAdapter, @unchecked Sendable {
         for stop in takeAllStops() { stop() }
     }
 
-    private func stop(for threadId: ThreadId) -> (@Sendable () -> Void) {
+    private func stop(for threadId: ThreadId) -> (@Sendable () -> Void)? {
         lock.lock()
         let found = activeInterrupts[threadId]
         lock.unlock()
-        return found ?? {}
+        return found
     }
 
     private func takeAllStops() -> [@Sendable () -> Void] {

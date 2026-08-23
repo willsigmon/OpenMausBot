@@ -59,13 +59,23 @@ final class PortM1ClaudeDriverTests: XCTestCase {
             printf '"%s"' "$a" >> "$FAKE_CLAUDE_DUMP"
           done
           printf '],"env":{' >> "$FAKE_CLAUDE_DUMP"
+          # Only the vars the test actually asserts on are captured, and only
+          # when actually SET in this child's environment — an empty value
+          # means the variable was stripped before spawn (deny-by-default).
+          # Its presence here would therefore prove a leak.
           efirst=1
-          env | grep '=' | while IFS='=' read -r k v; do
+          while IFS='=' read -r k v; do
             [ -z "$k" ] && continue
-            case "$k" in PATH|_|PWD|SHLVL|HOME|TMPDIR|OLDPWD|XPC_*|__CF|SECURITYSESSION|LaunchInstanceID|TERM_PROGRAM*) continue;; esac
+            [ -z "$v" ] && continue
             [ $efirst -eq 1 ] && efirst=0 || printf ',' >> "$FAKE_CLAUDE_DUMP"
             printf '"%s":"%s"' "$k" "$v" >> "$FAKE_CLAUDE_DUMP"
-          done
+          done <<EOF_PROBE
+        NPM_CONFIG_LOGLEVEL=$NPM_CONFIG_LOGLEVEL
+        ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+        CLAUDECODE=$CLAUDECODE
+        XAI_API_KEY=$XAI_API_KEY
+        BOX_TOKEN=$BOX_TOKEN
+        EOF_PROBE
           printf '},"prompt":' >> "$FAKE_CLAUDE_DUMP"
           # consume exactly ONE line — the prompt — then keep going with the
           # turn while stdin stays open (the real CLI reads stream-json
@@ -87,8 +97,14 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         emit "{\\"type\\":\\"system\\",\\"subtype\\":\\"init\\",\\"session_id\\":\\"$SESSION\\",\\"model\\":\\"$MODEL\\"}"
 
         if [ "$MODE" = "hang" ]; then
-          # never settle; interrupt() must end this
-          exec sleep 300
+          # never settle; interrupt() must end this. The background sleep
+          # detaches its stdio on purpose: an orphaned child holding the
+          # stdout/stderr pipes open would keep the driver's drain loops from
+          # ever seeing EOF (the exact trap upstream's kill(-pid) avoids by
+          # reaping the whole group).
+          sleep 300 >/dev/null 2>&1 </dev/null &
+          wait $!
+          exit 0
         fi
 
         if [ "$MODE" = "malformed" ]; then
@@ -236,18 +252,22 @@ final class PortM1ClaudeDriverTests: XCTestCase {
     func testPromptRidesStdinNeverArgvAndEnvIsStripped() async throws {
         let dump = (scratch as NSString).appendingPathComponent("dump.json")
         setenv("FAKE_CLAUDE_DUMP", dump, 1)
-        defer { unsetenv("FAKE_CLAUDE_DUMP") }
+        // The harness process may hold these (env-injected at boot); they
+        // ride in through the inherited base env exactly as upstream's test
+        // sets them on process.env.
+        setenv("ANTHROPIC_API_KEY", "sk-should-not-leak", 1)
+        setenv("CLAUDECODE", "1", 1)
+        setenv("XAI_API_KEY", "xai-should-not-leak", 1)
+        setenv("BOX_TOKEN", "box-should-not-leak", 1)
+        defer {
+            unsetenv("FAKE_CLAUDE_DUMP")
+            unsetenv("ANTHROPIC_API_KEY")
+            unsetenv("CLAUDECODE")
+            unsetenv("XAI_API_KEY")
+            unsetenv("BOX_TOKEN")
+        }
 
-        let (instance, recorder) = makeInstance(
-            config: ClaudeConfig(cli: fakePath),
-            environment: [
-                // workspace credentials the harness may hold must not ride along
-                "XAI_API_KEY": "xai-should-not-leak",
-                "BOX_TOKEN": "box-should-not-leak",
-                "ANTHROPIC_API_KEY": "sk-should-not-leak",
-                "CLAUDECODE": "1",
-            ]
-        )
+        let (instance, recorder) = makeInstance(config: ClaudeConfig(cli: fakePath))
 
         _ = try await instance.adapter.sendTurn(SendTurnInput(
             threadId: "t-hygiene", text: "the secret prompt", system: "You are Testy."

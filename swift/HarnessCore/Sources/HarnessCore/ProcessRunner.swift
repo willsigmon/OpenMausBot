@@ -133,6 +133,8 @@ public actor ProcessRunner {
         /// Write-then-close handle for the child's stdin. Nil only if the
         /// platform refused the pipe (never on Darwin in practice).
         public let stdinWriter: StdinWriter?
+        /// Keeps the Foundation.Process alive as long as this handle exists.
+        let processBox: ProcessBox?
     }
 
     // ── state ─────────────────────────────────────────────────────────────
@@ -336,6 +338,11 @@ public actor ProcessRunner {
     /// the exact same stream plumbing. Static + nonisolated: it touches only
     /// the process, its pipes, and lock-protected state boxes.
     nonisolated static func wireUpShared(process: Process, stdoutPipe: Pipe, stderrPipe: Pipe, stdinPipe: Pipe, escalationInterval: TimeInterval) -> RunningProcess {
+        // Strong retention: Foundation.Process must outlive every closure
+        // below. A weak reference would let the Process deallocate once the
+        // spawn call returns, silently no-op'ing interrupt() and the exit
+        // watcher (the child would keep running with nobody able to stop it).
+        let processBox = ProcessBox(process)
         let stdoutHandle = stdoutPipe.fileHandleForReading
         let stderrHandle = stderrPipe.fileHandleForReading
 
@@ -368,8 +375,8 @@ public actor ProcessRunner {
         // Streams finish only after their drains end AND the process is gone,
         // so a consumer looping over the stream sees every byte before the
         // stream closes.
-        Task.detached(priority: .utility) { [weak process] in
-            guard let process else { return }
+        Task.detached(priority: .utility) {
+            let process = processBox.process
             _ = await Self.awaitExit(process)
             await drainGroup.awaitBoth()
             stdoutContinuation.finish()
@@ -393,9 +400,8 @@ public actor ProcessRunner {
         // and guarantees a fast-exiting child's final stdout lines (the
         // `result` frame) still reach the consumer.
         let stderrTailState = state
-        Task.detached(priority: .utility) { [weak process] in
-            guard let process else { return }
-            let status = await Self.awaitExit(process)
+        Task.detached(priority: .utility) {
+            let status = await Self.awaitExit(processBox.process)
             let result = RunResult(
                 status: status,
                 spawnFailure: nil,
@@ -404,19 +410,28 @@ public actor ProcessRunner {
             stderrTailState.complete(result)
         }
 
-        let interrupt: @Sendable () -> Void = { [weak process] in
-            guard let process, process.isRunning else { return }
+        let interrupt: @Sendable () -> Void = {
+            let process = processBox.process
+            let wasRunning = process.isRunning
+            guard wasRunning else { return }
             process.interrupt()  // SIGINT to the child
             // Escalate: a child that traps/ignores SIGINT (and TERM) gets
             // SIGKILL after the grace window. Upstream sends SIGTERM to the
             // process GROUP via kill(-pid); Foundation cannot address a
             // group, so this is the documented divergence — same outcome
             // (the turn's tree dies), different signal choreography.
+            // The kill is unconditional after the grace period: signaling a
+            // reaped pid is a harmless ESRCH, while gating on Foundation's
+            // isRunning risks a stale read leaving a hung CLI alive.
             let grace = escalationInterval
             let targetPid = pid
-            Task.detached(priority: .utility) { [weak process] in
-                guard let process else { return }
+            Task.detached(priority: .utility) {
                 let deadline = ContinuousClock.now + .seconds(grace)
+                // Poll Foundation's isRunning rather than firing blind: a
+                // raw pid can be recycled by the OS within seconds, and an
+                // unconditional delayed SIGKILL would then murder an
+                // unrelated process. isRunning flips false once the child is
+                // reaped, which is exactly the "already dead" case.
                 while process.isRunning && ContinuousClock.now < deadline {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
@@ -434,8 +449,16 @@ public actor ProcessRunner {
             waitExit: waitExit,
             interrupt: interrupt,
             stdoutByteStream: stdoutBytes,
-            stdinWriter: stdinWriter
+            stdinWriter: stdinWriter,
+            processBox: processBox
         )
+    }
+
+    /// Retains the Foundation.Process for the lifetime of a RunningProcess —
+    /// see the comment at wireUpShared.
+    final class ProcessBox: @unchecked Sendable {
+        let process: Process
+        init(_ process: Process) { self.process = process }
     }
 
     /// Wait for a Process to exit off the calling actor. The blocking

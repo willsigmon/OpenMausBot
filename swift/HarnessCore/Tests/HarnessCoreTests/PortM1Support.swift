@@ -54,16 +54,19 @@ enum PortM1 {
         private var events: [RuntimeEvent] = []
         private var continuations: [(RuntimeEvent) -> Bool] = []
 
-        func record(_ event: RuntimeEvent) {
-            lock.lock()
-            events.append(event)
-            let pending = continuations
-            continuations = []
-            lock.unlock()
-            for predicate in pending {
-                if predicate(event) { return }
-            }
+    func record(_ event: RuntimeEvent) {
+        lock.lock()
+        events.append(event)
+        // Resolve only the waiters THIS event satisfies; the rest stay
+        // registered — clearing them all would strand a later waiter whose
+        // event arrives after some unrelated intermediate event.
+        var kept: [(RuntimeEvent) -> Bool] = []
+        for predicate in continuations {
+            if !predicate(event) { kept.append(predicate) }
         }
+        continuations = kept
+        lock.unlock()
+    }
 
         var all: [RuntimeEvent] {
             lock.lock()
@@ -93,12 +96,13 @@ enum PortM1 {
                 }
                 continuations.append(wrapped)
                 lock.unlock()
-                Task.detached(priority: .utility) {
+                Task.detached(priority: .utility) { [weak self] in
                     try? await Task.sleep(for: .seconds(timeout))
                     if gate.claim() {
+                        let seen = (self?.all.map(\.kind.typeKey) ?? []).joined(separator: ", ")
                         continuation.resume(throwing: NSError(
                             domain: "PortM1", code: 1,
-                            userInfo: [NSLocalizedDescriptionKey: "timed out waiting for expected event"]
+                            userInfo: [NSLocalizedDescriptionKey: "timed out waiting for expected event; saw [\(seen)]"]
                         ))
                     }
                 }
