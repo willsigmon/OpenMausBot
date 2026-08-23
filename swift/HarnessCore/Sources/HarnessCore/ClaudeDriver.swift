@@ -625,14 +625,20 @@ public final class ClaudeInstance: ProviderInstance, @unchecked Sendable {
     public func dispose() async {}
 }
 
-/// Two-phase init helper: the adapter is constructed before the instance
-/// finishes initializing, so it holds a mutable link the instance's init
-/// fills in last. Strong on purpose — the instance↔adapter pair shares one
-/// lifetime (dispose clears the link), mirroring upstream's closures over
-/// the instance scope.
-final class InstanceLinker: @unchecked Sendable {
-    var instance: ClaudeInstance?
-}
+    /// Two-phase init helper: the adapter is constructed before the instance
+    /// finishes initializing, so it consults this link lazily (at first use)
+    /// rather than copying a not-yet-set reference. Strong on purpose — the
+    /// instance↔adapter pair shares one lifetime, mirroring upstream's
+    /// closures over the instance scope.
+    final class InstanceLinker: @unchecked Sendable {
+        private let lock = NSLock()
+        private var _instance: ClaudeInstance?
+
+        var instance: ClaudeInstance? {
+            get { lock.lock(); defer { lock.unlock() }; return _instance }
+            set { lock.lock(); defer { lock.unlock() }; _instance = newValue }
+        }
+    }
 
 /// Adapter surface for the M1 slice: send/interrupt/stopAll work; steer and
 /// request answering stay unimplemented until session retention (S4) and the
@@ -651,7 +657,7 @@ final class ClaudeAdapter: ProviderAdapter, @unchecked Sendable {
         localComputerMcp: false
     )
 
-    private var instanceRef: ClaudeInstance?
+    private let instanceLink: InstanceLinker
     private let lock = NSLock()
     private var listeners: [(UUID, RuntimeEventListener)] = []
     /// The live child per thread, so interruptTurn can SIGTERM it mid-turn
@@ -659,11 +665,13 @@ final class ClaudeAdapter: ProviderAdapter, @unchecked Sendable {
     private var activeInterrupts: [ThreadId: @Sendable () -> Void] = [:]
 
     init(link: InstanceLinker) {
-        self.instanceRef = link.instance
+        self.instanceLink = link
     }
 
+    private var instance: ClaudeInstance? { instanceLink.instance }
+
     func sendTurn(_ input: SendTurnInput) async throws -> TurnStartResult {
-        guard let instance = instanceRef else {
+        guard let instance else {
             throw ProviderError(code: .upstreamOutage, message: "instance disposed")
         }
         // One turn at a time per thread — a second send while busy is a

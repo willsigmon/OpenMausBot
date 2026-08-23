@@ -164,13 +164,14 @@ public actor ProcessRunner {
 
     public nonisolated static func spawnAwaited(
         _ executablePath: String,
-        options: Options
+        options: Options,
+        escalationInterval: TimeInterval = 5.0
     ) async throws -> RunningProcess {
         // spawnSync touches only Foundation.Process + Pipe, so hopping to
         // the actor adds nothing; run it directly.
         do {
             let process = try makeProcess(executablePath, options: options)
-            return try start(process, escalationInterval: 5.0)
+            return try start(process, escalationInterval: escalationInterval)
         } catch {
             throw error
         }
@@ -344,25 +345,25 @@ public actor ProcessRunner {
 
         let (stderrBytes, stderrContinuation) = AsyncStream<Data>.makeStream()
 
-        // Drain via blocking reads on detached tasks — the pipes stay empty
-        // regardless of consumer behavior. Each task ends at EOF.
+        // Drain via blocking reads on GLOBAL-queue threads, not detached
+        // tasks: `availableData` parks its thread until the child closes the
+        // pipe, and a parked cooperative-pool thread starves every other
+        // task in the process whenever a child outlives its turn. Each
+        // reader ends at EOF; the DrainGroup bookkeeping stays task-side.
         let drainGroup = DrainGroup()
+        let reader = PipeReader()
         _ = Task.detached(priority: .utility) {
-            defer { drainGroup.finishStdout() }
-            while true {
-                let chunk = stdoutHandle.availableData
-                if chunk.isEmpty { break }
+            await reader.run(stdoutHandle) { chunk in
                 stdoutContinuation.yield(chunk)
                 stdoutLineContinuation.yield(chunk)
             }
+            drainGroup.finishStdout()
         }
         _ = Task.detached(priority: .utility) {
-            defer { drainGroup.finishStderr() }
-            while true {
-                let chunk = stderrHandle.availableData
-                if chunk.isEmpty { break }
+            await reader.run(stderrHandle) { chunk in
                 stderrContinuation.yield(chunk)
             }
+            drainGroup.finishStderr()
         }
         // Streams finish only after their drains end AND the process is gone,
         // so a consumer looping over the stream sees every byte before the
@@ -437,14 +438,19 @@ public actor ProcessRunner {
         )
     }
 
-    /// Wait for a Process to exit off the calling actor. Polling is confined
-    /// here; callers see a plain async suspension.
+    /// Wait for a Process to exit off the calling actor. The blocking
+    /// `waitUntilExit` parks a GLOBAL-queue thread, never a cooperative one:
+    /// parking a cooperative thread here starves the whole pool whenever a
+    /// child outlives its turn (a hung CLI, a leaked fake), deadlocking any
+    /// task that awaits a continuation afterwards.
     private static func awaitExit(_ process: Process) async -> ExitStatus {
-        while process.isRunning {
-            try? await Task.sleep(for: .milliseconds(10))
+        let verdict: (Int32, Process.TerminationReason) = await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                process.waitUntilExit()
+                continuation.resume(returning: (process.terminationStatus, process.terminationReason))
+            }
         }
-        process.waitUntilExit()
-        return classify(process.terminationStatus, reason: process.terminationReason)
+        return classify(verdict.0, reason: verdict.1)
     }
 
     private static func waitWithTimeout(_ running: RunningProcess, seconds: TimeInterval) async -> RunResult? {
@@ -591,6 +597,27 @@ private final class RunState: @unchecked Sendable {
         lock.unlock()
         for continuation in pending {
             continuation.resume(returning: value)
+        }
+    }
+}
+
+/// Runs a blocking pipe reader on a GLOBAL-queue thread so the cooperative
+/// pool never hosts a parked `availableData` call. The yield closure runs
+/// back on the cooperative pool (it touches stream continuations).
+private final class PipeReader: @unchecked Sendable {
+    func run(
+        _ handle: FileHandle,
+        onChunk: @escaping @Sendable (Data) -> Void
+    ) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global(qos: .utility).async {
+                while true {
+                    let chunk = handle.availableData
+                    if chunk.isEmpty { break }
+                    onChunk(chunk)
+                }
+                continuation.resume()
+            }
         }
     }
 }

@@ -100,9 +100,11 @@ final class PortM1ProcessRunnerTests: XCTestCase {
         while :; do sleep 1; done
         """)
 
+        let runner = ProcessRunner(escalationInterval: 1.0)
         let running = try await ProcessRunner.spawnAwaited(
             stubborn,
-            options: .init(environment: ["PATH": "/bin:/usr/bin"], arguments: [])
+            options: .init(environment: ["PATH": "/bin:/usr/bin"], arguments: []),
+            escalationInterval: 1.0
         )
 
         // Wait for the trap-armed marker on its stdout.

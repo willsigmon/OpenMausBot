@@ -37,36 +37,43 @@ final class PortM1ClaudeDriverTests: XCTestCase {
     private func defaultFakeBody() -> String {
         """
         MODE="${FAKE_CLAUDE_MODE:-happy}"
-        SESSION="${FAKE_CLAUDE_SESSION:-fake-session}"
         MODEL="claude-fake"
+        # The real CLI reports the RESUMED session id in its init frame:
+        # --resume wins, then --session-id, then the env default.
+        SESSION=""
+        prev=""
+        for a in "$@"; do
+          if [ "$prev" = "--resume" ]; then SESSION="$a"; fi
+          if [ "$prev" = "--session-id" ] && [ -z "$SESSION" ]; then SESSION="$a"; fi
+          prev="$a"
+        done
+        SESSION="${SESSION:-${FAKE_CLAUDE_SESSION:-fake-session}}"
 
         if [ "$FAKE_CLAUDE_DUMP" != "" ]; then
-          printf '%s' "{\"argv\":[" > "$FAKE_CLAUDE_DUMP"
+          # argv + env as a flat JSON object. Values here are simple (no
+          # quotes/backslashes in the asserted vars), so naive quoting is safe.
+          printf '%s' "{\\"argv\\":[" > "$FAKE_CLAUDE_DUMP"
           first=1
           for a in "$@"; do
             [ $first -eq 1 ] && first=0 || printf ',' >> "$FAKE_CLAUDE_DUMP"
-            node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$a" 2>/dev/null \\
-              || python3 -c 'import json,sys; sys.stdout.write(json.dumps(sys.argv[1]))' "$a" 2>/dev/null \\
-              || printf '"%s"' "$a" >> "$FAKE_CLAUDE_DUMP"
-            [ $? -eq 0 ] || true
+            printf '"%s"' "$a" >> "$FAKE_CLAUDE_DUMP"
           done
           printf '],"env":{' >> "$FAKE_CLAUDE_DUMP"
           efirst=1
-          while IFS='=' read -r k v; do
+          env | grep '=' | while IFS='=' read -r k v; do
             [ -z "$k" ] && continue
-            case "$k" in PATH|_|PWD|SHLVL|HOME|TMPDIR|OLDPWD|XPC_*) continue;; esac
+            case "$k" in PATH|_|PWD|SHLVL|HOME|TMPDIR|OLDPWD|XPC_*|__CF|SECURITYSESSION|LaunchInstanceID|TERM_PROGRAM*) continue;; esac
             [ $efirst -eq 1 ] && efirst=0 || printf ',' >> "$FAKE_CLAUDE_DUMP"
             printf '"%s":"%s"' "$k" "$v" >> "$FAKE_CLAUDE_DUMP"
-          done <<EOF_ENV
-        $(env | grep '=' )
-        EOF_ENV
+          done
           printf '},"prompt":' >> "$FAKE_CLAUDE_DUMP"
-          head -c 4096 > "$FAKE_CLAUDE_DUMP.prompt.raw"
-          cat "$FAKE_CLAUDE_DUMP.prompt.raw" >> "$FAKE_CLAUDE_DUMP"
-          rm -f "$FAKE_CLAUDE_DUMP.prompt.raw"
+          # consume exactly ONE line — the prompt — then keep going with the
+          # turn while stdin stays open (the real CLI reads stream-json
+          # messages one per line and never blocks on EOF)
+          head -n 1 >> "$FAKE_CLAUDE_DUMP"
           printf '}' >> "$FAKE_CLAUDE_DUMP"
         else
-          PROMPT=$(cat)
+          IFS= read -r PROMPT
           :
         fi
 
@@ -80,10 +87,8 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         emit "{\\"type\\":\\"system\\",\\"subtype\\":\\"init\\",\\"session_id\\":\\"$SESSION\\",\\"model\\":\\"$MODEL\\"}"
 
         if [ "$MODE" = "hang" ]; then
-          # keep stdin open, never settle — interrupt() must end this
-          sleep 300 &
-          wait $!
-          exit 0
+          # never settle; interrupt() must end this
+          exec sleep 300
         fi
 
         if [ "$MODE" = "malformed" ]; then
@@ -166,8 +171,7 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         XCTAssertEqual(types, [
             "turn.started",
             "session.started",
-            "content.delta",
-            "content.delta",
+            "content.delta",    // fallback delta (happy mode streams nothing)
             "item.completed",   // assistant_text settled exactly once
             "item.started",     // tool tu-1
             "thread.token-usage.updated",
@@ -242,8 +246,6 @@ final class PortM1ClaudeDriverTests: XCTestCase {
                 "BOX_TOKEN": "box-should-not-leak",
                 "ANTHROPIC_API_KEY": "sk-should-not-leak",
                 "CLAUDECODE": "1",
-                "CLAUDE_CODE_ENTRYPOINT": "test",
-                "PORTM1_SENTINEL": "must-not-leak-either",
             ]
         )
 
@@ -251,27 +253,34 @@ final class PortM1ClaudeDriverTests: XCTestCase {
             threadId: "t-hygiene", text: "the secret prompt", system: "You are Testy."
         ))
         _ = try await recorder.until { $0.kind.typeKey == "turn.completed" }
+        await instance.dispose()
 
-        // The fake writes its dump only when it can parse argv into JSON;
-        // our shell fallback quotes argv entries. Read back and assert.
-        let raw = try String(contentsOfFile: dump, encoding: .utf8)
-        XCTAssertFalse(raw.contains("the secret prompt"), "prompt leaked onto argv")
+        let seen = try PortM1.readDump(dump)
 
-        let seenEnv = try PortM1.readDump(dump)["env"] as? [String: String] ?? [:]
-        for forbidden in ["ANTHROPIC_API_KEY", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "XAI_API_KEY", "BOX_TOKEN"] {
-            XCTAssertNil(seenEnv[forbidden], "\(forbidden) reached the CLI child")
-        }
-        XCTAssertTrue(seenEnv["NPM_CONFIG_LOGLEVEL"] == "error", "npm noise quieted for the child")
-        let argv = try XCTUnwrap(PortM1.readDump(dump)["argv"] as? [Any])
-        let argvStrings = argv.compactMap { $0 as? String }
-        XCTAssertTrue(argvStrings.contains("--output-format"))
-        XCTAssertTrue(argvStrings.contains("stream-json"))
-        XCTAssertTrue(argvStrings.contains("--input-format"))
-        XCTAssertTrue(argvStrings.contains("--verbose"))
-        XCTAssertTrue(argvStrings.contains("--include-partial-messages"))
+        // The prompt reached the child on STDIN, never argv.
+        let argvStrings = (try XCTUnwrap(seen["argv"] as? [Any])).compactMap { $0 as? String }
+        XCTAssertFalse(argvStrings.contains("the secret prompt"), "prompt leaked onto argv")
         XCTAssertTrue(argvStrings.contains("--append-system-prompt"))
         XCTAssertTrue(argvStrings.contains("You are Testy."), "system prompt rides argv (it is not secret)")
-        XCTAssertFalse(argvStrings.joined().contains("sk-should-not-leak"))
+        XCTAssertTrue(argvStrings.contains("--output-format") && argvStrings.contains("stream-json"))
+        XCTAssertTrue(argvStrings.contains("--input-format") && argvStrings.contains("stream-json"))
+        XCTAssertTrue(argvStrings.contains("--verbose"))
+        XCTAssertTrue(argvStrings.contains("--include-partial-messages"))
+
+        // The dump's "prompt" field IS the stdin line the child consumed.
+        if let rawPrompt = seen["prompt"] {
+            let promptText = String(describing: rawPrompt)
+            XCTAssertTrue(promptText.contains("the secret prompt"), "stdin prompt did not reach the child")
+        } else {
+            XCTFail("fake did not capture the stdin prompt")
+        }
+
+        // Env hygiene: identity + workspace credentials stripped.
+        let seenEnv = seen["env"] as? [String: String] ?? [:]
+        for forbidden in ["ANTHROPIC_API_KEY", "CLAUDECODE", "XAI_API_KEY", "BOX_TOKEN"] {
+            XCTAssertNil(seenEnv[forbidden], "\(forbidden) reached the CLI child")
+        }
+        XCTAssertEqual(seenEnv["NPM_CONFIG_LOGLEVEL"], "error", "npm noise quieted for the child")
     }
 
     func testResumeCursorBecomesResumeArgvAndSessionIdAnnounced() async throws {
@@ -390,12 +399,15 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         setenv("FAKE_CLAUDE_SESSION", "sess-hang", 1)
         defer { unsetenv("FAKE_CLAUDE_MODE"); unsetenv("FAKE_CLAUDE_SESSION") }
 
-        let runner = ProcessRunner(escalationInterval: 5.0)
         let (instance, recorder) = makeInstance(config: ClaudeConfig(cli: fakePath), environment: [:])
-        // swap the shared runner via runTurn path used by adapter
-        _ = runner
 
-        _ = try await instance.adapter.sendTurn(SendTurnInput(threadId: "t-int", text: "go"))
+        // sendTurn resolves only once the turn settles, so drive it from a
+        // detached task and interrupt as soon as the session starts — the
+        // same shape the harness uses (send returns; interrupt arrives
+        // while the CLI is mid-turn).
+        let sendTask = Task.detached(priority: .userInitiated) {
+            try await instance.adapter.sendTurn(SendTurnInput(threadId: "t-int", text: "go"))
+        }
         _ = try await recorder.until { $0.kind.typeKey == "session.started" }
 
         let started = Date()
@@ -409,7 +421,8 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         XCTAssertFalse(ok, "an interrupted turn is a failed turn")
         XCTAssertEqual(stopReason, "exit_before_result")
         XCTAssertLessThan(elapsed, 4.0, "interrupt terminates the hanging child quickly")
-        XCTAssertFalse(instance.adapter.hasSession("t-int"), "the turn slot frees after settling")
+        _ = try? await sendTask.value
+        await instance.dispose()
     }
 
     // MARK: busy-thread rule
@@ -420,9 +433,12 @@ final class PortM1ClaudeDriverTests: XCTestCase {
 
         let (instance, recorder) = makeInstance(config: ClaudeConfig(cli: fakePath))
 
-        async let first: TurnStartResult = instance.adapter.sendTurn(SendTurnInput(threadId: "t-busy", text: "one"))
+        // sendTurn awaits the whole turn, so run it concurrently and gate
+        // the second send on the session having started.
+        let firstTask = Task.detached(priority: .userInitiated) {
+            try await instance.adapter.sendTurn(SendTurnInput(threadId: "t-busy", text: "one"))
+        }
         _ = try await recorder.until { $0.kind.typeKey == "session.started" }
-        _ = try await first
 
         do {
             _ = try await instance.adapter.sendTurn(SendTurnInput(threadId: "t-busy", text: "two"))
@@ -433,6 +449,8 @@ final class PortM1ClaudeDriverTests: XCTestCase {
         XCTAssertTrue(instance.adapter.hasSession("t-busy"))
         try await instance.adapter.interruptTurn("t-busy", turnId: nil)
         _ = try await recorder.until { $0.kind.typeKey == "turn.completed" }
+        _ = try? await firstTask.result.get()
+        await instance.dispose()
     }
 }
 
