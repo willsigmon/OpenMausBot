@@ -1,0 +1,3 @@
+module HarnessCorePackageTests {
+    header "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/include/HarnessCorePackageTests-Swift.h"
+}

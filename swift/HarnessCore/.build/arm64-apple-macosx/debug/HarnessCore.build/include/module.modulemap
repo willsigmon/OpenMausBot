@@ -1,0 +1,3 @@
+module HarnessCore {
+    header "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCore.build/include/HarnessCore-Swift.h"
+}

@@ -1,0 +1,96 @@
+{
+  "": {
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/primary.swiftdeps"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/ContractsTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/ContractsTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/ContractsTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/ContractsTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/ContractsTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/ContractsTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/EventFixtures.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/EventFixtures.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/EventFixtures.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/EventFixtures~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/EventFixtures.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/EventFixtures.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/JSONValueTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/JSONValueTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/JSONValueTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/JSONValueTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/JSONValueTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/JSONValueTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortConfigTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortConfigTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortConfigTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortConfigTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortConfigTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortConfigTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortEnvPathTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEnvPathTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEnvPathTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEnvPathTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEnvPathTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEnvPathTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortEventBusTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEventBusTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEventBusTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEventBusTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEventBusTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortEventBusTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortFakeDriver.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortFakeDriver.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortFakeDriver.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortFakeDriver~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortFakeDriver.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortFakeDriver.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortNamesTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortNamesTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortNamesTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortNamesTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortNamesTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortNamesTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortRedactTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRedactTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRedactTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRedactTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRedactTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRedactTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/PortRegistryTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRegistryTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRegistryTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRegistryTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRegistryTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/PortRegistryTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/RuntimeEventCodableTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventCodableTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventCodableTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventCodableTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventCodableTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventCodableTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/RuntimeEventIdTests.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventIdTests.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventIdTests.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventIdTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventIdTests.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/RuntimeEventIdTests.dia"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Tests/HarnessCoreTests/TestSupport.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/TestSupport.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/TestSupport.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/TestSupport~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/TestSupport.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCoreTests.build/TestSupport.dia"
+  }
+}

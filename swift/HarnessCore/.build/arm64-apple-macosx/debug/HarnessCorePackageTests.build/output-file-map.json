@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/primary.swiftdeps"
+  },
+  "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.derived/runner.swift": {
+    "dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/runner.d",
+    "object": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/wsig/collabs/openwsigbot/swift/HarnessCore/.build/arm64-apple-macosx/debug/HarnessCorePackageTests.build/runner.dia"
+  }
+}

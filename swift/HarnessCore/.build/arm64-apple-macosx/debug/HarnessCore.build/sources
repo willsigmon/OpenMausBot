@@ -1,0 +1,12 @@
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/AtomicWrite.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/Contracts.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/DataDirs.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/Drivers.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/EnvPath.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/EventBus.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/HarnessConfig.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/JSONValue.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/Names.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/ProviderRegistry.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/Redact.swift
+/Users/wsig/collabs/openwsigbot/swift/HarnessCore/Sources/HarnessCore/RuntimeEvent.swift
