@@ -36,6 +36,20 @@ authoritative dev-setup, repo map, and command list.
 - App state lives in `~/.openmausbot/` (bots, transcripts, per-thread NDJSON logs, `config.json` with
   keys). A default "Zephyr" bot is created on first run.
 
+### Exercising a real chat turn without a paid CLI (useful for demos/manual tests)
+- The built-in **OpenAI-compatible** engine (`openaiCompat` instance, `server/drivers/openai-compat.ts`)
+  needs no CLI. Point it at any OpenAI-compatible `/chat/completions` endpoint by starting the harness
+  with `OPENAI_COMPAT_URL` and `OPENAI_COMPAT_API_KEY` set (e.g. a free OpenRouter/Groq key, or a local
+  stub server). The `openaiCompat` instance then reports `available` in `GET /api/instances`.
+- Point a bot at it with `PATCH /api/bots/<id>` body
+  `{"modelSelection":{"instanceId":"openaiCompat","model":"<model>"}}`, then
+  `POST /api/bots/<id>/messages` `{"text":"..."}`. `startTurn` rejects with 409 (message not persisted)
+  if the bot's selected instance is `unavailable`, so an engine must be available first.
+- SSE events (`GET /api/events`) stream live through the Vite `/api` proxy (verified token-by-token).
+  In an automated/headless browser the chat pane may need a manual refresh to render a live turn even
+  though the server pushed the events and persisted the reply — this is a browser-side quirk, not a
+  harness/proxy problem.
+
 ### Verify / lint / test / build
 - CI gates (`.github/workflows/ci.yml`, Node 24): `pnpm typecheck`, `pnpm test`, `pnpm check:electron`,
   and `pnpm exec vite build`. `pnpm check:electron` downloads the Electron binary on first run.
