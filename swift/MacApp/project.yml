@@ -1,0 +1,28 @@
+name: OpenSigbotMac
+options:
+  bundleIdPrefix: dev.wsig
+  deploymentTarget:
+    macOS: "14.0"
+packages:
+  HarnessCore:
+    path: ../HarnessCore
+settings:
+  base:
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+targets:
+  OpenSigbotMac:
+    type: application
+    platform: macOS
+    sources: [Sources]
+    dependencies:
+      - package: HarnessCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.wsig.opensigbot.mac
+        INFOPLIST_KEY_LSUIElement: false
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        OTHER_LDFLAGS: ""
